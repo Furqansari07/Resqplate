@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f0;
+  --foreground: #3a2e27;
+
+  --color-primary: #e2725b;
+  --color-primary-hover: #c85a42;
+  --color-primary-light: #fdeae4;
+
+  --color-secondary: #7c9473;
+  --color-secondary-hover: #647a5c;
+  --color-secondary-light: #eaf0e6;
+
+  --color-accent: #f4a340;
+  --color-accent-light: #fef1dd;
+
+  --color-card: #fffdf9;
+  --color-border: #f0dfc8;
+  --color-text-muted: #8a7968;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
+}
+
+@layer components {
+  .card-warm {
+    @apply rounded-3xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--color-primary-light)] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-soft {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-secondary-light)] px-4 py-2 text-sm font-semibold text-[var(--color-secondary-hover)] transition hover:bg-[var(--color-secondary)] hover:text-white;
+  }
+
+  .input-warm {
+    @apply w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm text-[var(--foreground)] shadow-sm placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30;
+  }
+
+  .label-warm {
+    @apply mb-1 block text-sm font-semibold text-[var(--foreground)];
+  }
+
+  .badge-warm {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+}
