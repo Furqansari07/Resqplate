@@ -1,7 +1,7 @@
 "use client";
 import Navbar from "@/components/Navbar";
 import ProfilePhotoUpload from '@/components/ProfilePhotoUpload';
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense} from "react";
 import { useSearchParams } from "next/navigation";
 import AddressPicker, { type AddressValue } from "@/components/AddressPicker";
 import { getProfileCompletion } from "@/lib/profileCompletion";
@@ -27,7 +27,7 @@ interface UserProfile {
   verificationStatus?: string;
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const searchParams = useSearchParams();
   const isRequired = searchParams.get('required') === '1';
 
@@ -403,5 +403,22 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[var(--background)]">
+          <Navbar />
+          <main className="flex items-center justify-center py-16">
+            <p className="text-[var(--foreground-muted)]">Loading profile...</p>
+          </main>
+        </div>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }
