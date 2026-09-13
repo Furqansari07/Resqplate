@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         ? body.quantityUnit
         : null;
     const pickupBy = new Date(body.pickupBy);
+    const safetyConfirmed = body.safetyConfirmed === true;
 
     if (!title || !quantity || !category || !body.pickupBy) {
       return NextResponse.json(
@@ -54,6 +55,20 @@ export async function POST(request: Request) {
           error:
             'Title, quantity, category, and pickup deadline are required.',
         },
+        { status: 400 }
+      );
+    }
+
+    if (!photoUrl) {
+      return NextResponse.json(
+        { error: 'A photo of the packed food is required before publishing.' },
+        { status: 400 }
+      );
+    }
+
+    if (!safetyConfirmed) {
+      return NextResponse.json(
+        { error: 'You must confirm the food safety declaration before publishing.' },
         { status: 400 }
       );
     }
@@ -82,6 +97,7 @@ export async function POST(request: Request) {
       quantityUnit,
       pickupBy,
       specialInstructions,
+      safetyConfirmed,
       status: 'available',
     });
 

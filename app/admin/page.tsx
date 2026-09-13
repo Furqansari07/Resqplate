@@ -16,7 +16,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[var(--background)]">
       <Navbar />
       <AdminDashboardClient />
     </div>

@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Quicksand, Nunito } from "next/font/google";
-
+import { Space_Grotesk, Inter } from "next/font/google";
+import Footer from '@/components/Footer';
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
-const heading = Quicksand({
+const heading = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-heading",
 });
 
-const body = Nunito({
+const body = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-body",
 });
 
@@ -27,10 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${heading.variable} ${body.variable}`}>
-      <body className="antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
+   <html lang="en" className={`${heading.variable} ${body.variable} dark`}>
+  <body className="antialiased">
+    <Providers>{children}</Providers>
+    <Footer />
+  </body>
+</html> 
   );
 }

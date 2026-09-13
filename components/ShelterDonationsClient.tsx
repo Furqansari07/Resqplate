@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import RatingWidget from '@/components/RatingWidget';
+import CategoryIcon from '@/components/CategoryIcon';
+
 type Person = {
   name?: string;
   address?: string;
@@ -27,6 +29,17 @@ type Donation = {
   donorId?: Person;
   volunteerId?: Person;
 };
+
+const statusBadgeStyles: Record<string, string> = {
+  available: 'bg-[var(--color-primary-light)] text-[var(--color-primary)]',
+  claimed: 'bg-[var(--color-accent-light)] text-[var(--color-accent)]',
+  'in-transit': 'bg-[var(--color-accent-light)] text-[var(--color-accent)]',
+  delivered: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]',
+  received: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]',
+  cancelled: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]',
+  expired: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]',
+};
+
 function formatTimelineDate(dateString?: string) {
   if (!dateString) {
     return 'Not recorded yet';
@@ -156,30 +169,30 @@ export default function ShelterDonationsClient() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900">
+      <h1 className="text-3xl font-bold text-[var(--foreground)] animate-fade-in-up">
         Incoming Food Donations
       </h1>
 
-      <p className="mt-2 text-gray-600">
+      <p className="mt-2 text-[var(--foreground-muted)] animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         Review food details, coordinate with volunteers, and confirm receipt
         when food arrives.
       </p>
 
       {error && (
-        <p className="mt-6 rounded bg-red-50 p-3 text-sm text-red-700">
+        <p className="mt-6 rounded-xl border border-[var(--color-danger)]/20 bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger)]">
           {error}
         </p>
       )}
 
       {success && (
-        <p className="mt-6 rounded bg-green-50 p-3 text-sm text-green-700">
+        <p className="mt-6 rounded-xl border border-[var(--color-secondary)]/20 bg-[var(--color-secondary-light)] p-3 text-sm text-[var(--color-secondary)]">
           {success}
         </p>
       )}
 
       {!loading && donations.length > 0 && (
-        <section className="mt-6 rounded-lg bg-white p-5 shadow">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <section className="card mt-6 p-5">
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">
             Find an incoming donation
           </h2>
 
@@ -189,18 +202,18 @@ export default function ShelterDonationsClient() {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search food, donor, or volunteer"
-              className="rounded border border-gray-300 p-3 text-black"
+              className="input"
             />
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded border border-gray-300 p-3 text-black"
+              className="input"
             >
-              <option value="all">All statuses</option>
+              <option value="all" className="bg-[var(--surface)]">All statuses</option>
 
               {statuses.map((status) => (
-                <option key={status} value={status}>
+                <option key={status} value={status} className="bg-[var(--surface)]">
                   {status.replace('-', ' ')}
                 </option>
               ))}
@@ -209,16 +222,16 @@ export default function ShelterDonationsClient() {
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
-              className="rounded border border-gray-300 p-3 text-black"
+              className="input"
             >
-              <option value="newest">Newest assigned donations</option>
-              <option value="pickup-deadline">
+              <option value="newest" className="bg-[var(--surface)]">Newest assigned donations</option>
+              <option value="pickup-deadline" className="bg-[var(--surface)]">
                 Earliest pickup deadline
               </option>
             </select>
           </div>
 
-          <p className="mt-3 text-sm text-gray-600">
+          <p className="mt-3 text-sm text-[var(--foreground-muted)]">
             Showing {filteredDonations.length} of {donations.length} assigned
             donation{donations.length === 1 ? '' : 's'}.
           </p>
@@ -226,144 +239,160 @@ export default function ShelterDonationsClient() {
       )}
 
       {loading ? (
-        <p className="mt-8 text-gray-600">Loading incoming donations...</p>
+        <p className="mt-8 text-[var(--foreground-muted)]">Loading incoming donations...</p>
       ) : donations.length === 0 ? (
-        <p className="mt-8 rounded bg-white p-5 text-gray-600 shadow">
+        <p className="card mt-8 p-5 text-[var(--foreground-muted)]">
           No donations have been assigned to your shelter yet.
         </p>
       ) : filteredDonations.length === 0 ? (
-        <p className="mt-8 rounded bg-white p-5 text-gray-600 shadow">
+        <p className="card mt-8 p-5 text-[var(--foreground-muted)]">
           No donations match your current search or filter.
         </p>
       ) : (
         <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {filteredDonations.map((donation) => (
-            <article
-              key={donation._id}
-              className="rounded-lg bg-white p-6 shadow"
-            >
-              {donation.photoUrl && (
-                <img
-                  src={donation.photoUrl}
-                  alt={donation.title}
-                  className="mb-4 h-40 w-full rounded object-cover"
-                />
-              )}
+          {filteredDonations.map((donation, index) => {
+            const badgeClass =
+              statusBadgeStyles[donation.status] ||
+              'bg-[var(--surface-2)] text-[var(--foreground-muted)]';
 
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {donation.title}
-                </h2>
-
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium capitalize text-emerald-800">
-                  {donation.status}
-                </span>
-              </div>
-
-              <p className="mt-3 text-gray-700">
-                <b>Quantity:</b> {donation.quantity}
-              </p>
-
-              <p className="mt-1 text-gray-700">
-                <b>Category:</b> {donation.category}
-              </p>
-
-              {donation.description && (
-                <p className="mt-3 text-sm text-gray-700">
-                  <b>Description:</b> {donation.description}
-                </p>
-              )}
-
-                           {donation.pickupBy && (
-                <p className="mt-2 text-sm font-medium text-red-700">
-                  <b>Pickup deadline:</b>{' '}
-                  {new Date(donation.pickupBy).toLocaleString()}
-                </p>
-              )}
-
-              {typeof donation.distanceKm === 'number' && (
-                <p className="mt-2 text-sm font-medium text-emerald-700">
-                  <b>Distance from donor:</b> {donation.distanceKm} km
-                </p>
-              )} 
-
-              {donation.specialInstructions && (
-                <p className="mt-2 rounded bg-amber-50 p-3 text-sm text-amber-900">
-                  <b>Food-handling instructions:</b>{' '}
-                  {donation.specialInstructions}
-                </p>
-              )}
-
-              <hr className="my-4" />
-
-              <p className="text-sm text-gray-700">
-                <b>Donor:</b> {donation.donorId?.name || 'Not available'}
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                <b>Volunteer:</b>{' '}
-                {donation.volunteerId?.name || 'Not assigned yet'}
-              </p>
-
-              <p className="mt-1 text-sm text-gray-700">
-                <b>Volunteer phone:</b>{' '}
-                {donation.volunteerId?.phone || 'Not provided'}
-              </p>
-
-              <section className="mt-5 rounded bg-gray-50 p-4">
-                <h3 className="font-medium text-gray-900">
-                  Delivery timeline
-                </h3>
-
-                <div className="mt-3 space-y-3 text-sm">
-                  <p className="text-gray-700">
-                    <b>1. Volunteer accepted pickup:</b>{' '}
-                    {formatTimelineDate(donation.claimedAt)}
-                  </p>
-
-                  <p className="text-gray-700">
-                    <b>2. Food marked in transit:</b>{' '}
-                    {formatTimelineDate(donation.inTransitAt)}
-                  </p>
-
-                  <p className="text-gray-700">
-                    <b>3. Volunteer marked food delivered:</b>{' '}
-                    {formatTimelineDate(donation.deliveredAt)}
-                  </p>
-
-                  <p className="text-gray-700">
-                    <b>4. Shelter confirmed receipt:</b>{' '}
-                    {formatTimelineDate(donation.receivedAt)}
-                  </p>
-                </div>
-              </section>
-
-              {donation.status === 'delivered' && (
-                <button
-                  onClick={() => confirmReceipt(donation._id)}
-                  disabled={confirmingId === donation._id}
-                  className="mt-5 w-full rounded bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {confirmingId === donation._id
-                    ? 'Confirming receipt...'
-                    : 'Confirm receipt'}
-                </button>
-              )}
-                          {donation.status === 'received' && (
-                <>
-                  <p className="mt-5 rounded bg-green-50 p-3 text-sm text-green-700">
-                    Your shelter has confirmed receipt of this food donation.
-                  </p>
-
-                  <RatingWidget
-                    donationId={donation._id}
-                    myRole="shelter"
+            return (
+              <article
+                key={donation._id}
+                className="card card-hover animate-fade-in-up p-6"
+                style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
+              >
+                {donation.photoUrl ? (
+                  <img
+                    src={donation.photoUrl}
+                    alt={donation.title}
+                    className="mb-4 h-40 w-full rounded-2xl border border-[var(--border)] object-cover"
                   />
-                </>
-              )}
-             
-            </article>
-          ))}
+                ) : (
+                  <div className="mb-4 flex h-40 w-full items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+                    <CategoryIcon category={donation.category} className="h-12 w-12 text-[var(--foreground-subtle)]" />
+                  </div>
+                )}
+
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="icon-badge h-9 w-9 shrink-0">
+                      <CategoryIcon category={donation.category} className="h-4.5 w-4.5" />
+                    </div>
+                    <h2 className="truncate text-xl font-semibold text-[var(--foreground)]">
+                      {donation.title}
+                    </h2>
+                  </div>
+
+                  <span className={`badge shrink-0 capitalize ${badgeClass}`}>
+                    {donation.status}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-[var(--foreground-muted)]">
+                  <b className="text-[var(--foreground)]">Quantity:</b> {donation.quantity}
+                </p>
+
+                <p className="mt-1 text-[var(--foreground-muted)]">
+                  <b className="text-[var(--foreground)]">Category:</b> {donation.category}
+                </p>
+
+                {donation.description && (
+                  <p className="mt-3 text-sm text-[var(--foreground-muted)]">
+                    <b className="text-[var(--foreground)]">Description:</b> {donation.description}
+                  </p>
+                )}
+
+                {donation.pickupBy && (
+                  <p className="mt-2 text-sm font-medium text-[var(--color-danger)]">
+                    <b>Pickup deadline:</b>{' '}
+                    {new Date(donation.pickupBy).toLocaleString()}
+                  </p>
+                )}
+
+                {typeof donation.distanceKm === 'number' && (
+                  <p className="mt-2 text-sm font-medium text-[var(--color-secondary)]">
+                    <b>Distance from donor:</b> {donation.distanceKm} km
+                  </p>
+                )}
+
+                {donation.specialInstructions && (
+                  <p className="mt-2 rounded-xl border border-[var(--color-accent)]/20 bg-[var(--color-accent-light)] p-3 text-sm text-[var(--color-accent)]">
+                    <b>Food-handling instructions:</b>{' '}
+                    {donation.specialInstructions}
+                  </p>
+                )}
+
+                <hr className="my-4 border-[var(--border)]" />
+
+                <p className="text-sm text-[var(--foreground-muted)]">
+                  <b className="text-[var(--foreground)]">Donor:</b> {donation.donorId?.name || 'Not available'}
+                </p>
+
+                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                  <b className="text-[var(--foreground)]">Volunteer:</b>{' '}
+                  {donation.volunteerId?.name || 'Not assigned yet'}
+                </p>
+
+                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                  <b className="text-[var(--foreground)]">Volunteer phone:</b>{' '}
+                  {donation.volunteerId?.phone || 'Not provided'}
+                </p>
+
+                <section className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                  <h3 className="font-medium text-[var(--foreground)]">
+                    Delivery timeline
+                  </h3>
+
+                  <div className="mt-3 space-y-3 text-sm">
+                    <p className="text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">1. Volunteer accepted pickup:</b>{' '}
+                      {formatTimelineDate(donation.claimedAt)}
+                    </p>
+
+                    <p className="text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">2. Food marked in transit:</b>{' '}
+                      {formatTimelineDate(donation.inTransitAt)}
+                    </p>
+
+                    <p className="text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">3. Volunteer marked food delivered:</b>{' '}
+                      {formatTimelineDate(donation.deliveredAt)}
+                    </p>
+
+                    <p className="text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">4. Shelter confirmed receipt:</b>{' '}
+                      {formatTimelineDate(donation.receivedAt)}
+                    </p>
+                  </div>
+                </section>
+
+                {donation.status === 'delivered' && (
+                  <button
+                    onClick={() => confirmReceipt(donation._id)}
+                    disabled={confirmingId === donation._id}
+                    className="btn-primary mt-5 w-full"
+                  >
+                    {confirmingId === donation._id
+                      ? 'Confirming receipt...'
+                      : 'Confirm receipt'}
+                  </button>
+                )}
+
+                {donation.status === 'received' && (
+                  <>
+                    <p className="mt-5 rounded-xl border border-[var(--color-secondary)]/20 bg-[var(--color-secondary-light)] p-3 text-sm text-[var(--color-secondary)]">
+                      Your shelter has confirmed receipt of this food donation.
+                    </p>
+
+                    <RatingWidget
+                      donationId={donation._id}
+                      myRole="shelter"
+                    />
+                  </>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </main>

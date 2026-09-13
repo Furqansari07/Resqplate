@@ -2,6 +2,8 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import RatingWidget from '@/components/RatingWidget';
+import CategoryIcon from '@/components/CategoryIcon';
+
 type Donation = {
   _id: string;
   title: string;
@@ -44,6 +46,16 @@ const statusOptions = [
   { value: 'expired', label: 'Expired' },
 ];
 
+const statusBadgeStyles: Record<string, string> = {
+  available: 'bg-[var(--color-primary-light)] text-[var(--color-primary)]',
+  claimed: 'bg-[var(--color-accent-light)] text-[var(--color-accent)]',
+  'in-transit': 'bg-[var(--color-accent-light)] text-[var(--color-accent)]',
+  delivered: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]',
+  received: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]',
+  cancelled: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]',
+  expired: 'bg-[var(--color-danger-light)] text-[var(--color-danger)]',
+};
+
 const emptyForm = {
   title: '',
   quantity: '',
@@ -55,6 +67,7 @@ const emptyForm = {
   specialInstructions: '',
   photoUrl: '',
   photoPublicId: '',
+  safetyConfirmed: false,
 };
 
 function formatDateTimeLocal(dateString?: string) {
@@ -156,6 +169,7 @@ export default function DonationsClient() {
       specialInstructions: donation.specialInstructions || '',
       photoUrl: donation.photoUrl || '',
       photoPublicId: donation.photoPublicId || '',
+      safetyConfirmed: true,
     });
 
     setEditingId(donation._id);
@@ -215,10 +229,21 @@ export default function DonationsClient() {
     }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!form.photoUrl) {
+      setError('Please upload a photo of the packed food before publishing.');
+      return;
+    }
+
+    if (!form.safetyConfirmed) {
+      setError('Please confirm the food safety declaration before publishing.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -232,7 +257,7 @@ export default function DonationsClient() {
         headers: {
           'Content-Type': 'application/json',
         },
-                body: JSON.stringify({
+        body: JSON.stringify({
           ...form,
           quantityAmount:
             form.quantityAmount === '' ? null : Number(form.quantityAmount),
@@ -307,39 +332,35 @@ export default function DonationsClient() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900">
+      <h1 className="text-3xl font-bold text-[var(--foreground)] animate-fade-in-up">
         My Food Donations
       </h1>
 
-      <p className="mt-2 text-gray-600">
+      <p className="mt-2 text-[var(--foreground-muted)] animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         Add surplus food so volunteers can arrange a safe pickup.
       </p>
 
-      <section className="mt-8 rounded-lg bg-white p-6 shadow">
+      <section className="card mt-8 p-6 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">
             {editingId ? 'Edit donation listing' : 'Create a donation listing'}
           </h2>
 
           {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
+            <button type="button" onClick={resetForm} className="btn-secondary !px-3 !py-2 text-sm">
               Cancel editing
             </button>
           )}
         </div>
 
         {error && (
-          <p className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">
+          <p className="mt-4 rounded-xl border border-[var(--color-danger)]/20 bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger)]">
             {error}
           </p>
         )}
 
         {success && (
-          <p className="mt-4 rounded bg-green-50 p-3 text-sm text-green-700">
+          <p className="mt-4 rounded-xl border border-[var(--color-secondary)]/20 bg-[var(--color-secondary-light)] p-3 text-sm text-[var(--color-secondary)]">
             {success}
           </p>
         )}
@@ -355,21 +376,21 @@ export default function DonationsClient() {
             onChange={(event) =>
               setForm({ ...form, title: event.target.value })
             }
-            className="rounded border border-gray-300 p-3 text-black"
+            className="input"
           />
 
-                    <input
+          <input
             required
             placeholder="Quantity (example: 25 meals)"
             value={form.quantity}
             onChange={(event) =>
               setForm({ ...form, quantity: event.target.value })
             }
-            className="rounded border border-gray-300 p-3 text-black"
+            className="input"
           />
 
           <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="label">
               Exact amount (optional, but needed for shelter capacity
               matching)
             </label>
@@ -383,7 +404,7 @@ export default function DonationsClient() {
                 onChange={(event) =>
                   setForm({ ...form, quantityAmount: event.target.value })
                 }
-                className="w-32 rounded border border-gray-300 p-3 text-black"
+                className="input w-32"
               />
 
               <select
@@ -394,10 +415,10 @@ export default function DonationsClient() {
                     quantityUnit: event.target.value as 'meals' | 'kg',
                   })
                 }
-                className="rounded border border-gray-300 p-3 text-black"
+                className="input w-auto"
               >
-                <option value="meals">meals</option>
-                <option value="kg">kilograms</option>
+                <option value="meals" className="bg-[var(--surface)]">meals</option>
+                <option value="kg" className="bg-[var(--surface)]">kilograms</option>
               </select>
             </div>
           </div>
@@ -408,14 +429,14 @@ export default function DonationsClient() {
             onChange={(event) =>
               setForm({ ...form, category: event.target.value })
             }
-            className="rounded border border-gray-300 p-3 text-black"
+            className="input"
           >
-            <option value="" disabled>
+            <option value="" disabled className="bg-[var(--surface)]">
               Select food category
             </option>
 
             {foodCategories.map((category) => (
-              <option key={category} value={category}>
+              <option key={category} value={category} className="bg-[var(--surface)]">
                 {category}
               </option>
             ))}
@@ -429,7 +450,7 @@ export default function DonationsClient() {
             onChange={(event) =>
               setForm({ ...form, pickupBy: event.target.value })
             }
-            className="rounded border border-gray-300 p-3 text-black"
+            className="input"
           />
 
           <textarea
@@ -438,7 +459,7 @@ export default function DonationsClient() {
             onChange={(event) =>
               setForm({ ...form, description: event.target.value })
             }
-            className="min-h-24 rounded border border-gray-300 p-3 text-black md:col-span-2"
+            className="input min-h-24 resize-none md:col-span-2"
           />
 
           <textarea
@@ -450,12 +471,12 @@ export default function DonationsClient() {
                 specialInstructions: event.target.value,
               })
             }
-            className="min-h-24 rounded border border-gray-300 p-3 text-black md:col-span-2"
+            className="input min-h-24 resize-none md:col-span-2"
           />
 
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Food photo (optional)
+                      <div className="md:col-span-2">
+            <label className="label">
+              Food photo *
             </label>
 
             {form.photoUrl ? (
@@ -463,14 +484,10 @@ export default function DonationsClient() {
                 <img
                   src={form.photoUrl}
                   alt="Food preview"
-                  className="h-24 w-24 rounded object-cover"
+                  className="h-24 w-24 rounded-2xl border border-[var(--border)] object-cover"
                 />
 
-                <button
-                  type="button"
-                  onClick={removePhoto}
-                  className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
+                <button type="button" onClick={removePhoto} className="btn-secondary !px-3 !py-2 text-sm">
                   Remove photo
                 </button>
               </div>
@@ -480,19 +497,32 @@ export default function DonationsClient() {
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handlePhotoChange}
                 disabled={uploadingPhoto}
-                className="block w-full text-sm text-gray-700 file:mr-4 file:rounded file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-emerald-700 disabled:opacity-50"
+                className="block w-full text-sm text-[var(--foreground-muted)] file:mr-4 file:rounded-full file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[var(--color-primary-hover)] disabled:opacity-50"
               />
             )}
 
             {uploadingPhoto && (
-              <p className="mt-2 text-sm text-gray-500">Uploading photo...</p>
+              <p className="mt-2 text-sm text-[var(--foreground-subtle)]">Uploading photo...</p>
             )}
           </div>
+
+                    <label className="flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 md:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.safetyConfirmed}
+              onChange={(event) => setForm({ ...form, safetyConfirmed: event.target.checked })}
+              className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-primary)]"
+            />
+            <span className="text-sm text-[var(--foreground-muted)]">
+              I confirm this food was prepared recently, stored hygienically, and contains no
+              spoiled ingredients.
+            </span>
+          </label>
 
           <button
             type="submit"
             disabled={submitting || uploadingPhoto}
-            className="rounded bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50 md:col-span-2"
+            className="btn-primary md:col-span-2"
           >
             {submitting
               ? editingId
@@ -506,33 +536,33 @@ export default function DonationsClient() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold text-[var(--foreground)]">
           Your listings
         </h2>
 
         {!loading && donations.length > 0 && (
-          <div className="mt-4 grid gap-4 rounded-lg bg-white p-5 shadow md:grid-cols-2">
+          <div className="card mt-4 grid gap-4 p-5 md:grid-cols-2">
             <input
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by title or category"
-              className="rounded border border-gray-300 p-3 text-black"
+              className="input"
             />
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded border border-gray-300 p-3 text-black"
+              className="input"
             >
               {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} className="bg-[var(--surface)]">
                   {option.label}
                 </option>
               ))}
             </select>
 
-            <p className="text-sm text-gray-600 md:col-span-2">
+            <p className="text-sm text-[var(--foreground-muted)] md:col-span-2">
               Showing {filteredDonations.length} of {donations.length}{' '}
               listing{donations.length === 1 ? '' : 's'}.
             </p>
@@ -540,103 +570,116 @@ export default function DonationsClient() {
         )}
 
         {loading ? (
-          <p className="mt-4 text-gray-600">Loading listings...</p>
+          <p className="mt-4 text-[var(--foreground-muted)]">Loading listings...</p>
         ) : donations.length === 0 ? (
-          <p className="mt-4 rounded bg-white p-5 text-gray-600 shadow">
+          <p className="card mt-4 p-5 text-[var(--foreground-muted)]">
             You have not created a donation listing yet.
           </p>
         ) : filteredDonations.length === 0 ? (
-          <p className="mt-4 rounded bg-white p-5 text-gray-600 shadow">
+          <p className="card mt-4 p-5 text-[var(--foreground-muted)]">
             No listings match your search or filter.
           </p>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {filteredDonations.map((donation) => {
+            {filteredDonations.map((donation, index) => {
               const hasTimeline =
                 donation.claimedAt ||
                 donation.inTransitAt ||
                 donation.deliveredAt ||
                 donation.receivedAt;
 
+              const badgeClass =
+                statusBadgeStyles[donation.status] ||
+                'bg-[var(--surface-2)] text-[var(--foreground-muted)]';
+
               return (
                 <article
                   key={donation._id}
-                  className="rounded-lg bg-white p-5 shadow"
+                  className="card card-hover animate-fade-in-up p-5"
+                  style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
                 >
-                  {donation.photoUrl && (
+                  {donation.photoUrl ? (
                     <img
                       src={donation.photoUrl}
                       alt={donation.title}
-                      className="mb-4 h-40 w-full rounded object-cover"
+                      className="mb-4 h-40 w-full rounded-2xl border border-[var(--border)] object-cover"
                     />
+                  ) : (
+                    <div className="mb-4 flex h-40 w-full items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+                      <CategoryIcon category={donation.category} className="h-12 w-12 text-[var(--foreground-subtle)]" />
+                    </div>
                   )}
 
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {donation.title}
-                      </h3>
-
-                      <p className="mt-1 text-sm text-gray-600">
-                        {donation.quantity} · {donation.category}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="icon-badge h-8 w-8 shrink-0">
+                        <CategoryIcon category={donation.category} className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-[var(--foreground)]">
+                          {donation.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                          {donation.quantity} · {donation.category}
+                        </p>
+                      </div>
                     </div>
 
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium capitalize text-emerald-800">
+                    <span className={`badge shrink-0 capitalize ${badgeClass}`}>
                       {donation.status}
                     </span>
                   </div>
 
                   {donation.description && (
-                    <p className="mt-4 text-sm text-gray-700">
-                      <b>Description:</b> {donation.description}
+                    <p className="mt-4 text-sm text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">Description:</b> {donation.description}
                     </p>
                   )}
 
                   {donation.pickupBy && (
-                    <p className="mt-2 text-sm text-gray-700">
-                      <b>Pickup deadline:</b>{' '}
+                    <p className="mt-2 text-sm text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">Pickup deadline:</b>{' '}
                       {new Date(donation.pickupBy).toLocaleString()}
                     </p>
                   )}
 
                   {donation.specialInstructions && (
-                    <p className="mt-2 text-sm text-gray-700">
-                      <b>Instructions:</b> {donation.specialInstructions}
+                    <p className="mt-2 text-sm text-[var(--foreground-muted)]">
+                      <b className="text-[var(--foreground)]">Instructions:</b> {donation.specialInstructions}
                     </p>
                   )}
 
                   {hasTimeline && (
-                    <section className="mt-4 rounded bg-gray-50 p-4">
-                      <h4 className="font-medium text-gray-900">
+                    <section className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                      <h4 className="font-medium text-[var(--foreground)]">
                         Delivery timeline
                       </h4>
 
                       <div className="mt-3 space-y-3 text-sm">
-                        <p className="text-gray-700">
-                          <b>1. Volunteer accepted pickup:</b>{' '}
+                        <p className="text-[var(--foreground-muted)]">
+                          <b className="text-[var(--foreground)]">1. Volunteer accepted pickup:</b>{' '}
                           {formatTimelineDate(donation.claimedAt)}
                         </p>
 
-                        <p className="text-gray-700">
-                          <b>2. Food marked in transit:</b>{' '}
+                        <p className="text-[var(--foreground-muted)]">
+                          <b className="text-[var(--foreground)]">2. Food marked in transit:</b>{' '}
                           {formatTimelineDate(donation.inTransitAt)}
                         </p>
 
-                        <p className="text-gray-700">
-                          <b>3. Volunteer marked food delivered:</b>{' '}
+                        <p className="text-[var(--foreground-muted)]">
+                          <b className="text-[var(--foreground)]">3. Volunteer marked food delivered:</b>{' '}
                           {formatTimelineDate(donation.deliveredAt)}
                         </p>
 
-                        <p className="text-gray-700">
-                          <b>4. Shelter confirmed receipt:</b>{' '}
+                        <p className="text-[var(--foreground-muted)]">
+                          <b className="text-[var(--foreground)]">4. Shelter confirmed receipt:</b>{' '}
                           {formatTimelineDate(donation.receivedAt)}
                         </p>
                       </div>
                     </section>
                   )}
 
-                                    <p className="mt-4 text-xs text-gray-500">
+                  <p className="mt-4 text-xs text-[var(--foreground-subtle)]">
                     Created: {new Date(donation.createdAt).toLocaleString()}
                   </p>
 
@@ -648,20 +691,15 @@ export default function DonationsClient() {
                   )}
 
                   {donation.status === 'available' && (
-
-                 
                     <div className="mt-4 flex flex-wrap gap-3">
-                      <button
-                        onClick={() => startEditing(donation)}
-                        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                      >
+                      <button onClick={() => startEditing(donation)} className="btn-secondary text-sm">
                         Edit listing
                       </button>
 
                       <button
                         onClick={() => cancelDonation(donation._id)}
                         disabled={cancellingId === donation._id}
-                        className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-danger)] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {cancellingId === donation._id
                           ? 'Cancelling...'

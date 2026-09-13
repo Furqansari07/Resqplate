@@ -34,6 +34,22 @@ export async function PATCH(
       );
     }
 
+    await dbConnect();
+
+    const volunteer = await User.findById(user.id)
+      .select('verificationStatus')
+      .lean();
+
+    if (volunteer?.verificationStatus !== 'verified') {
+      return NextResponse.json(
+        {
+          error:
+            'You must complete identity verification before accepting pickups. Go to "Get Verified" in the menu to submit your documents.',
+        },
+        { status: 403 }
+      );
+    }
+
     const { id } = await context.params;
     const { shelterId } = await request.json();
 
@@ -50,8 +66,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
-    await dbConnect();
 
     const shelter = await User.findOne({
       _id: shelterId,
@@ -138,13 +152,13 @@ export async function PATCH(
       );
     }
     await Notification.create({
-  userId: donation.donorId,
-  type: 'donation_claimed',
-  title: 'Donation Claimed',
-  message: 'Your food donation has been claimed by a volunteer.',
-  donationId: donation._id,
-  read: false,
-});
+      userId: donation.donorId,
+      type: 'donation_claimed',
+      title: 'Donation Claimed',
+      message: 'Your food donation has been claimed by a volunteer.',
+      donationId: donation._id,
+      read: false,
+    });
 
     return NextResponse.json({
       message: 'Pickup accepted and shelter selected successfully.',

@@ -16,7 +16,7 @@ export default async function ShelterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[var(--background)]">
       <Navbar />
       <ShelterDonationsClient />
     </div>

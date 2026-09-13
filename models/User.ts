@@ -1,96 +1,78 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, model, models } from 'mongoose';
 
-export type UserRole = "donor" | "volunteer" | "shelter" | "admin";
-
-export interface IUser extends Document {
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-  phone?: string;
-  address?: string;
-  organizationName?: string;
-  latitude?: number;
-  longitude?: number;
-  shelterCapacity?: number;
-  shelterCapacityUnit?: 'meals' | 'kg';
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const UserSchema = new Schema<IUser>(
+const UserSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true },
+    firstName: { type: String },
+    middleName: { type: String },
+    lastName: { type: String },
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-
-    password: {
-      type: String,
-      required: true,
-    },
+    email: { type: String, unique: true, sparse: true },
+    emailVerified: { type: Boolean, default: false },
+    password: { type: String },
+    phone: { type: String, unique: true, sparse: true },
 
     role: {
       type: String,
-      enum: ["donor", "volunteer", "shelter", "admin"],
-      required: true,
+      enum: ['donor', 'volunteer', 'shelter', 'admin'],
     },
+    provider: { type: String, default: 'credentials' },
 
-    phone: {
+    address: { type: String, default: '' },
+    streetAddress: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    country: { type: String, default: '' },
+    pincode: { type: String, default: '' },
+    latitude: { type: Number },
+    longitude: { type: Number },
+
+    organizationName: { type: String, default: '' },
+    shelterCapacity: { type: Number },
+    shelterCapacityUnit: { type: String, enum: ['meals', 'kg'] },
+    vehicleType: { type: String, default: '' },
+
+    profilePhotoUrl: { type: String, default: '' },
+
+    // Donor-specific
+    donorType: { type: String, enum: ['individual', 'commercial'] },
+    gstin: { type: String, default: '' },
+    fssaiNumber: { type: String, default: '' },
+    foodSafetyUndertaking: { type: Boolean, default: false },
+
+    // Shelter-specific
+    ngoDarpanId: { type: String, default: '' },
+
+    // Identity verification (shared across roles)
+    verificationStatus: {
       type: String,
-      trim: true,
-      default: "",
+      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      default: 'unverified',
     },
+    verificationSubmittedAt: { type: Date },
+    verificationRejectionReason: { type: String, default: '' },
+    verificationDocumentUrl: { type: String, default: '' }, // legacy single-doc fallback
 
-    address: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+    verificationDocuments: {
+      // Volunteer
+      addressProofUrl: { type: String, default: '' },
+      vehicleLicenseUrl: { type: String, default: '' },
+      vehicleDocumentUrl: { type: String, default: '' },
+      criminalRecordUrl: { type: String, default: '' },
+      aadharCardUrl: { type: String, default: '' },
 
-    organizationName: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+      // Donor
+      governmentIdUrl: { type: String, default: '' },
+      businessDocUrl: { type: String, default: '' },
 
-    latitude: {
-      type: Number,
-      default: null,
+      // Shelter
+      registrationCertificateUrl: { type: String, default: '' },
+      panCardUrl: { type: String, default: '' },
+      fssaiRegistrationDocUrl: { type: String, default: '' },
     },
-
-    longitude: {
-      type: Number,
-      default: null,
-    },
-    shelterCapacity: {
-      type: Number,
-      default: null,
-    },
-
-    shelterCapacityUnit: {
-      type: String,
-      enum: ['meals', 'kg', null],
-      default: null,
-    },
-
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-const User: Model<IUser> =
-  mongoose.models.User ||
-  mongoose.model<IUser>("User", UserSchema);
-
+const User = models.User || model('User', UserSchema);
 export default User;

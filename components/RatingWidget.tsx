@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Star, MessageSquareQuote } from 'lucide-react';
 
 type RaterRole = 'donor' | 'volunteer' | 'shelter';
 
@@ -26,11 +27,17 @@ const CATEGORY_LABEL: Record<string, string> = {
   pickup_delivery_experience: 'Pickup & delivery experience',
 };
 
-function Stars({ value }: { value: number }) {
+function StarRow({ value, size = 16 }: { value: number; size?: number }) {
   return (
-    <span aria-label={`${value} out of 5 stars`}>
-      {'★'.repeat(value)}
-      <span className="text-gray-300">{'★'.repeat(5 - value)}</span>
+    <span className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          width={size}
+          height={size}
+          className={n <= value ? 'fill-[var(--color-accent)] text-[var(--color-accent)]' : 'fill-transparent text-[var(--foreground-subtle)]'}
+        />
+      ))}
     </span>
   );
 }
@@ -113,41 +120,42 @@ export default function RatingWidget({
 
   if (loading) {
     return (
-      <div className="mt-4 rounded bg-gray-50 p-4 text-sm text-gray-500">
+      <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--foreground-subtle)]">
         Loading ratings...
       </div>
     );
   }
 
   return (
-    <div className="mt-4 rounded bg-gray-50 p-4">
-      <h4 className="font-medium text-gray-900">Ratings & feedback</h4>
+    <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+      <div className="flex items-center gap-2">
+        <MessageSquareQuote className="h-4 w-4 text-[var(--foreground-subtle)]" />
+        <h4 className="font-medium text-[var(--foreground)]">Ratings & feedback</h4>
+      </div>
 
       {error && (
-        <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">
+        <p className="mt-2 rounded-lg border border-[var(--color-danger)]/20 bg-[var(--color-danger-light)] p-2 text-xs text-[var(--color-danger)]">
           {error}
         </p>
       )}
 
       <div className="mt-3">
         {myRating ? (
-          <div className="text-sm text-gray-700">
-            <p>
-              <b>Your rating ({CATEGORY_LABEL[myRating.category]}):</b>{' '}
-              <span className="text-amber-500">
-                <Stars value={myRating.score} />
-              </span>
-            </p>
+          <div className="text-sm text-[var(--foreground-muted)]">
+            <div className="flex flex-wrap items-center gap-2">
+              <b className="text-[var(--foreground)]">Your rating ({CATEGORY_LABEL[myRating.category]}):</b>
+              <StarRow value={myRating.score} />
+            </div>
 
             {myRating.comment && (
-              <p className="mt-1 italic text-gray-600">
+              <p className="mt-1 italic text-[var(--foreground-subtle)]">
                 &ldquo;{myRating.comment}&rdquo;
               </p>
             )}
           </div>
         ) : (
           <div>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-[var(--foreground-muted)]">
               Rate the {CATEGORY_LABEL[
                 myRole === 'shelter'
                   ? 'food_condition'
@@ -157,7 +165,7 @@ export default function RatingWidget({
               ].toLowerCase()}:
             </p>
 
-            <div className="mt-2 flex items-center gap-1 text-2xl">
+            <div className="mt-2 flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((starValue) => (
                 <button
                   key={starValue}
@@ -165,14 +173,18 @@ export default function RatingWidget({
                   onClick={() => setSelectedScore(starValue)}
                   onMouseEnter={() => setHoverScore(starValue)}
                   onMouseLeave={() => setHoverScore(0)}
-                  className={
-                    starValue <= (hoverScore || selectedScore)
-                      ? 'text-amber-500'
-                      : 'text-gray-300'
-                  }
+                  className="p-0.5 transition-transform hover:scale-110"
                   aria-label={`Rate ${starValue} star${starValue === 1 ? '' : 's'}`}
                 >
-                  ★
+                  <Star
+                    width={22}
+                    height={22}
+                    className={
+                      starValue <= (hoverScore || selectedScore)
+                        ? 'fill-[var(--color-accent)] text-[var(--color-accent)]'
+                        : 'fill-transparent text-[var(--foreground-subtle)]'
+                    }
+                  />
                 </button>
               ))}
             </div>
@@ -182,14 +194,14 @@ export default function RatingWidget({
               onChange={(event) => setComment(event.target.value)}
               placeholder="Optional comment"
               maxLength={500}
-              className="mt-2 w-full rounded border border-gray-300 p-2 text-sm text-black"
+              className="input mt-2 min-h-20 resize-none"
             />
 
             <button
               type="button"
               onClick={submitRating}
               disabled={submitting}
-              className="mt-2 rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="btn-primary mt-2 text-sm"
             >
               {submitting ? 'Submitting...' : 'Submit rating'}
             </button>
@@ -198,21 +210,18 @@ export default function RatingWidget({
       </div>
 
       {otherRatings.length > 0 && (
-        <div className="mt-4 space-y-2 border-t border-gray-200 pt-3">
+        <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-3">
           {otherRatings.map((rating) => (
-            <div key={rating._id} className="text-sm text-gray-700">
-              <p>
-                <b>
-                  {ROLE_LABEL[rating.raterRole]} rated{' '}
-                  {CATEGORY_LABEL[rating.category].toLowerCase()}:
-                </b>{' '}
-                <span className="text-amber-500">
-                  <Stars value={rating.score} />
-                </span>
-              </p>
+            <div key={rating._id} className="text-sm text-[var(--foreground-muted)]">
+              <div className="flex flex-wrap items-center gap-2">
+                <b className="text-[var(--foreground)]">
+                  {ROLE_LABEL[rating.raterRole]} rated {CATEGORY_LABEL[rating.category].toLowerCase()}:
+                </b>
+                <StarRow value={rating.score} />
+              </div>
 
               {rating.comment && (
-                <p className="italic text-gray-600">
+                <p className="italic text-[var(--foreground-subtle)]">
                   &ldquo;{rating.comment}&rdquo;
                 </p>
               )}

@@ -1,202 +1,271 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { signIn } from 'next-auth/react';
+import { Globe } from 'lucide-react';
+import Logo from '@/components/Logo';
+import PhoneInput from '@/components/PhoneInput';
+import PasswordInput from '@/components/PasswordInput';
+import { validateEmail, validateName, validatePassword } from '@/lib/validators';
+
+type RegisterView = 'details' | 'otp';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [view, setView] = useState<RegisterView>('details');
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'volunteer',
-    address: '',
-    phone: '',
-  });
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneValid, setPhoneValid] = useState(false);
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('donor');
+  const [otp, setOtp] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Same warm-up as the login page — gets Mongoose's first (slow)
-    // connection to Atlas out of the way before the user submits.
-    fetch('/api/test_db').catch(() => {});
-  }, []);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleStartRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
-    setLoading(true);
 
+    const checks = [
+      validateName(firstName, 'First name'),
+      ...(middleName ? [validateName(middleName, 'Middle name')] : []),
+      validateName(lastName, 'Last name'),
+      validateEmail(email),
+      validatePassword(password),
+    ];
+
+    const firstFailure = checks.find((c) => !c.valid);
+    if (firstFailure) {
+      setError(firstFailure.message || 'Please check the form');
+      return;
+    }
+
+    if (!phoneValid) {
+      setError('Enter a valid phone number for the selected country');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch('/api/register', {
+      const res = await fetch('/api/register/start', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(form),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, middleName, lastName, email, phone, password, role }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-      if (!response.ok) {
-        setError(data.error || 'Unable to create account');
+      setView('otp');
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!otp || otp.length !== 6) {
+      setError('Enter the 6-digit code sent to your email');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
+      const loginRes = await signIn('credentials', { email, password, redirect: false });
+
+      if (loginRes?.error) {
+        router.push('/login?registered=true');
         return;
       }
 
-      router.replace('/login');
-    } catch {
-      setError('Unable to reach the server. Please try again.');
+      router.push('/profile?required=1');
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[var(--background)] px-4 py-12">
-      <div className="mx-auto max-w-md">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--background)] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-secondary-light)] text-2xl">
-            🌱
-          </div>
-          <h1 className="text-3xl font-bold text-[var(--foreground)]">
-            Join ResQPlate
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Create your account and start making a difference
-          </p>
+          <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold text-[var(--foreground)]">
+            <Logo size={40} />
+            ResQPlate
+          </Link>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-[var(--foreground)]">
+            {view === 'otp' ? 'Verify your email' : 'Create an account'}
+          </h2>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          autoComplete="off"
-          className="card-warm mt-8 space-y-4 p-6 sm:p-8"
-        >
+        <div className="card p-8 space-y-6">
           {error && (
-            <p className="rounded-2xl border border-[var(--color-primary)]/30 bg-[var(--color-primary-light)] p-3 text-sm text-[var(--color-primary-hover)]">
+            <div className="animate-fade-in rounded-xl bg-[var(--color-danger-light)] p-3 text-sm text-[var(--color-danger)] border border-[var(--color-danger)]/20">
               {error}
-            </p>
+            </div>
           )}
 
-          <div>
-            <label htmlFor="register-name" className="label-warm">
-              Full Name
-            </label>
-            <input
-              id="register-name"
-              name="name"
-              required
-              autoComplete="off"
-              placeholder="Enter your full name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="input-warm"
-            />
-          </div>
+          {view === 'details' && (
+            <>
+              <form onSubmit={handleStartRegister} className="space-y-4" noValidate>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="label">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="input"
+                      placeholder="John"
+                    />
+                  </div>
 
-          <div>
-            <label htmlFor="register-email" className="label-warm">
-              Email Address
-            </label>
-            <input
-              id="register-email"
-              name="email"
-              required
-              type="email"
-              autoComplete="off"
-              placeholder="Enter your email address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="input-warm"
-            />
-          </div>
+                  <div>
+                    <label className="label">Middle Name</label>
+                    <input
+                      type="text"
+                      value={middleName}
+                      onChange={(e) => setMiddleName(e.target.value)}
+                      className="input"
+                      placeholder="Optional"
+                    />
+                  </div>
 
-          <div>
-            <label htmlFor="register-password" className="label-warm">
-              Password
-            </label>
-            <input
-              id="register-password"
-              name="password"
-              required
-              type="password"
-              minLength={8}
-              autoComplete="off"
-              placeholder="Minimum 8 characters"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="input-warm"
-            />
-          </div>
+                  <div>
+                    <label className="label">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="input"
+                      placeholder="Doe"
+                    />
+                  </div>
+                </div>
 
-          <div>
-            <label htmlFor="register-role" className="label-warm">
-              I am registering as a
-            </label>
-            <select
-              id="register-role"
-              name="role"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="input-warm"
-            >
-              <option value="donor">Food Donor</option>
-              <option value="volunteer">Volunteer</option>
-              <option value="shelter">Shelter / NGO</option>
-            </select>
-          </div>
+                <div>
+                  <label className="label">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input"
+                    placeholder="name@example.com"
+                  />
+                </div>
 
-          <div>
-            <label htmlFor="register-address" className="label-warm">
-              Address{' '}
-              <span className="font-normal text-[var(--color-text-muted)]">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="register-address"
-              name="address"
-              autoComplete="off"
-              placeholder="Enter your address"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="input-warm"
-            />
-          </div>
+                <div>
+                  <label className="label">Phone Number</label>
+                  <PhoneInput onChange={(value, valid) => { setPhone(value); setPhoneValid(valid); }} />
+                </div>
 
-          <div>
-            <label htmlFor="register-phone" className="label-warm">
-              Phone Number{' '}
-              <span className="font-normal text-[var(--color-text-muted)]">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="register-phone"
-              name="phone"
-              type="tel"
-              autoComplete="off"
-              placeholder="Enter your phone number"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="input-warm"
-            />
-          </div>
+                <div>
+                  <label className="label">Password</label>
+                  <PasswordInput
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="Create a strong password"
+                    showChecklist
+                  />
+                </div>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Creating account...' : 'Create account'}
-          </button>
+                <div>
+                  <label className="label">Account Role</label>
+                  <select value={role} onChange={(e) => setRole(e.target.value)} className="input" required>
+                    <option value="donor">Food Donor</option>
+                    <option value="volunteer">Volunteer</option>
+                    <option value="shelter">Shelter / NGO</option>
+                  </select>
+                </div>
 
-          <p className="text-center text-sm text-[var(--color-text-muted)]">
-            Already registered?{' '}
-            <Link href="/login" className="font-semibold text-[var(--color-primary)]">
-              Sign in
-            </Link>
-          </p>
-        </form>
+                <button type="submit" disabled={loading} className="btn-primary w-full">
+                  {loading ? 'Sending code...' : 'Continue'}
+                </button>
+              </form>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-[var(--border)]"></div>
+                <span className="flex-shrink mx-4 text-xs uppercase text-[var(--foreground-subtle)] font-semibold">Or register with</span>
+                <div className="flex-grow border-t border-[var(--border)]"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                className="btn-secondary w-full"
+              >
+                <Globe className="h-4 w-4" /> Continue with Google
+              </button>
+            </>
+          )}
+
+          {view === 'otp' && (
+            <form onSubmit={handleVerify} className="space-y-4" noValidate>
+              <div className="text-center mb-2">
+                <p className="text-xs text-[var(--foreground-subtle)]">
+                  We sent a code to <span className="font-semibold text-[var(--foreground)]">{email}</span>
+                </p>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  className="input text-center tracking-widest text-lg"
+                  placeholder="123456"
+                />
+              </div>
+
+              <button type="submit" disabled={loading} className="btn-primary w-full">
+                {loading ? 'Verifying...' : 'Verify & Create Account'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setView('details'); setOtp(''); setError(''); }}
+                className="w-full text-center text-xs text-[var(--foreground-subtle)] hover:text-[var(--foreground)] pt-2"
+              >
+                &larr; Edit details
+              </button>
+            </form>
+          )}
+        </div>
+
+        <p className="text-center text-sm text-[var(--foreground-subtle)]">
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-[var(--color-primary)] hover:underline">
+            Sign In
+          </Link>
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

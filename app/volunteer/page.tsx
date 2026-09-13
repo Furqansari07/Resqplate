@@ -16,7 +16,7 @@ export default async function VolunteerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[var(--background)]">
       <Navbar />
       <VolunteerPickupsClient />
     </div>

@@ -28,6 +28,7 @@ export interface IDonationListing {
   deliveredAt?: Date | null;
   receivedAt?: Date | null;
   createdAt?: Date;
+  safetyConfirmed?: boolean;
 }
 
 const DonationListingSchema = new Schema<IDonationListing>(
@@ -121,6 +122,10 @@ const DonationListingSchema = new Schema<IDonationListing>(
     receivedAt: {
       type: Date,
       default: null,
+    },
+    safetyConfirmed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

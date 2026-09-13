@@ -7,8 +7,13 @@ type SessionUser = {
   role?: string;
 };
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_ROLES = ['donor', 'volunteer', 'shelter'];
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const DOCUMENT_TYPES = [...IMAGE_TYPES, 'application/pdf'];
+
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: Request) {
   try {
@@ -22,61 +27,82 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.role !== 'donor') {
+    if (!user.role || !ALLOWED_ROLES.includes(user.role)) {
       return NextResponse.json(
-        { error: 'Only food donors can upload a listing photo.' },
+        { error: 'You are not allowed to upload files.' },
         { status: 403 }
       );
     }
 
     const formData = await request.formData();
     const file = formData.get('file');
+    const purpose = formData.get('purpose'); // 'donation-photo' | 'profile-photo' | 'verification-document'
 
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json(
-        { error: 'No photo file was provided.' },
+        { error: 'No file was provided.' },
         { status: 400 }
       );
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const isVerificationUpload = purpose === 'verification-document';
+    const isProfilePhoto = purpose === 'profile-photo';
+
+    const allowedTypes = isVerificationUpload ? DOCUMENT_TYPES : IMAGE_TYPES;
+    const maxSize = isVerificationUpload ? DOCUMENT_MAX_BYTES : IMAGE_MAX_BYTES;
+
+    if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Only JPEG, PNG, or WEBP images are allowed.' },
+        {
+          error: isVerificationUpload
+            ? 'Only PDF, JPEG, or PNG files are allowed.'
+            : 'Only JPEG, PNG, or WEBP images are allowed.',
+        },
         { status: 400 }
       );
     }
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'Photo must be smaller than 5MB.' },
+        { error: `File must be smaller than ${maxSize / (1024 * 1024)}MB.` },
         { status: 400 }
       );
     }
+
+    const folder = isVerificationUpload
+      ? 'resqplate/verifications'
+      : isProfilePhoto
+        ? 'resqplate/profile-photos'
+        : 'resqplate/donations';
 
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const dataUri = `data:${file.type};base64,${base64}`;
 
     const uploadResult = await cloudinary.uploader.upload(dataUri, {
-      folder: 'resqplate/donations',
-      resource_type: 'image',
-      transformation: [
-        { width: 1200, height: 1200, crop: 'limit' },
-        { quality: 'auto' },
-        { fetch_format: 'auto' },
-      ],
+      folder,
+      resource_type: isVerificationUpload ? 'auto' : 'image',
+      ...(isVerificationUpload
+        ? {}
+        : {
+            transformation: [
+              { width: 1200, height: 1200, crop: 'limit' },
+              { quality: 'auto' },
+              { fetch_format: 'auto' },
+            ],
+          }),
     });
 
     return NextResponse.json({
-      message: 'Photo uploaded successfully.',
+      message: 'File uploaded successfully.',
       photoUrl: uploadResult.secure_url,
       photoPublicId: uploadResult.public_id,
     });
   } catch (error) {
-    console.error('Upload photo error:', error);
+    console.error('Upload file error:', error);
 
     return NextResponse.json(
-      { error: 'Unable to upload the photo. Please try again.' },
+      { error: 'Unable to upload the file. Please try again.' },
       { status: 500 }
     );
   }
